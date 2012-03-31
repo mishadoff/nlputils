@@ -45,4 +45,4 @@
       (apply concat (for [i (range 1 (inc (count string)))
                           :let [ss (subs string 0 i)]
                           :when (contains? dict ss)]
-                      (map #(cons ss %) (word-candidates-dict (subs string i) dict))))))
+                      (map #(cons ss %) (segment-bruteforce-clever (subs string i) dict))))))
