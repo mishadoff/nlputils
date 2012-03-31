@@ -40,5 +40,9 @@
   "Perform string segmentation by dictionary with bruteforce"
   (filter #(contains-all? % dict) (word-candidates-all string dict)))
 
-(defn segment-clever-bruteforce [string dict]
-  )
+(defn segment-bruteforce-clever [string dict]
+  (if (empty? string) [""]
+      (apply concat (for [i (range 1 (inc (count string)))
+                          :let [ss (subs string 0 i)]
+                          :when (contains? dict ss)]
+                      (map #(cons ss %) (word-candidates-dict (subs string i) dict))))))
