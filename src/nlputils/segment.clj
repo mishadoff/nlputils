@@ -4,20 +4,23 @@
 (def DICT (into #{} (re-seq #"[\w']+" (.toLowerCase (slurp "res/words.txt")))))
 ;; file with human audit results
 (def GOLD (map #(re-seq #"[\d\w]+" %) (seq (.split (.toLowerCase (slurp "res/twitter-hashtags.txt")) "\n"))))
+;; train file
 (def TRAIN-WORDS (re-seq #"[\d\w]+" (.toLowerCase (slurp "res/big.txt"))))
 
-(defn- train-unigram [words]
-  (frequencies TRAIN-WORDS))
-
-(defn- train-bigram [words]
-  (frequencies (partition 2 1 words)))
+(defn- train-ngram [words n]
+  "Trains ngram model with list of words.
+   Usage: bigram = (train-ngram words 2)"
+  (frequencies (partition n 1 words)))
 
 ;; models
-;; TODO make n gram model
-(def UNIGRAM-MODEL (train-unigram TRAIN-WORDS))
+
+;; unigram
+(def UNIGRAM-MODEL (train-ngram TRAIN-WORDS 1))
 (def UNIGRAM-SIZE (reduce + (vals UNIGRAM-MODEL)))
 (def UNIGRAM-VOC-SIZE (count (vals UNIGRAM-MODEL)))
-(def BIGRAM-MODEL (train-bigram TRAIN-WORDS))
+
+;; bigram
+(def BIGRAM-MODEL (train-ngram TRAIN-WORDS 2))
 (def BIGRAM-SIZE (reduce + (vals BIGRAM-MODEL)))
 (def BIGRAM-VOC-SIZE (count (vals BIGRAM-MODEL)))
 
@@ -31,6 +34,10 @@
       (reduce + (map #(Math/log (double (/ (inc (get BIGRAM-MODEL % 0))
                                            (+ BIGRAM-SIZE
                                               BIGRAM-VOC-SIZE)))) (partition 2 1 words)))))
+
+(defn- number-string? [w]
+  "Checks if string is number."
+  (reduce #(and %1 %2) (map #(Character/isDigit %) (seq w))))
 
 (defn segment-min [string dict]
   "Perform string segmentation by dictionary with minimum matching algorithm."
@@ -75,7 +82,11 @@
   (if (empty? string) [""]
       (apply concat (for [i (range 1 (inc (count string)))
                           :let [ss (subs string 0 i)]
-                          :when (contains? dict ss)]
+                          :when (or (contains? dict ss)
+                                    (and
+                                     (number-string? ss)
+                                     (if (= i (count string)) true
+                                       (not (number-string? (subs string 0 (inc i)))))))]
                       (map #(cons ss %) (word-candidates-dict (subs string i) dict))))))
 
 (defn segment-bruteforce-clever [string dict]
@@ -84,6 +95,8 @@
     segm (first (first (reverse (sort-by second (map #(list % (log-probability-bigram %)) cands)))))]
     segm))
 
+;; TODO add viterbi segmentation
+
 (defn calculate-accuracy [segf dict gold-set]
   (loop [[g & gs] gold-set correct 0]
     (if g
@@ -91,3 +104,9 @@
         (recur gs (inc correct))
         (recur gs correct))
       (double (/ correct (count gold-set))))))
+
+;; TEST RESULTS WITHOUT number processing
+;; min 0.155
+;; max 0.75
+;; clever unigram 0.765 / 0.795
+;; clever bigram 0.77 / 0.8 with numbers
