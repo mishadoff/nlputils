@@ -24,6 +24,12 @@
                          (recur ls prev ls-new)
                          (recur ls l (conj ls-new l))) ls-new)))) "000") 0 4))))
 
+(defn similar? [name1 name2 strategy]
+  "Check if two names are similar using strategy.
+   Strategy is just function name used for similarity (e.g soundex)"
+  (= (strategy name1) (strategy name2)))
+
+
 ;; TODO unit tests
 ;; (soundex "Rubin") => R150
 ;; (soundex "Robert") => R163
