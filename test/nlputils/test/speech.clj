@@ -27,12 +27,13 @@
   (is (= "C30303" (soundex-extended "Cossick"))))
 
 (deftest nysiis-test []
-  (is (= "CASPARAVACH" (nysiis "Kaspirovich")))
+  (is (= "CASPARAVAC" (nysiis "Kaspirovich")))
   (is (= "CATNACAV" (nysiis "Katnikov")))
   (is (= "CATNACAV" (nysiis "Citnikov")))
-  (is (= "LANCHANC" (nysiis "Lenchenko")))
+  (is (= "LANCANC" (nysiis "Lenchenko")))
   (is (= "STADNACAV" (nysiis "Stadnikov")))
-  (is (= "PRADSCY" (nysiis "Prudskiy"))))
+  (is (= "PRADSCY" (nysiis "Prudskiy")))
+  (is (= "PRADSCY" (nysiis "Prudssskiy"))))
 
 ;; Run all tests in current namespace
 (run-tests)

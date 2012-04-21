@@ -96,10 +96,9 @@
   (loop [[l & ls] (partition 2 1 name) news []]
     (if l
       (let [[a b] l]
-        (if (vowel? a)
-          (cond (= \h b) (recur ls news)
-                (= \w b) (recur ls (conj news \a))
-                :else (recur ls (conj news b))) (recur ls (conj news b))))
+        (cond (and (vowel? a) (= \w b)) (recur ls (conj news \a))
+              (and (not (vowel? a)) (= \h b)) (recur ls news)
+              :else (recur ls (conj news b))))
       (apply str (subs name 0 1) news))))
 
 (defn- nysiis-laststep [name]
@@ -109,26 +108,22 @@
         (.endsWith name "a") (subs name 0 (- (count name) 1))
         (.endsWith name "ay") (str (subs name 0 (- (count name) 2)) "y")
         :else name))
-        
+
+(defn- collapse-duplicates [s]
+  (loop [[a & b] s prev nil res []]
+    (if a
+      (if (= prev a)
+        (recur b a res)
+        (recur b a (conj res a))) (apply str res))))
 
 (defn nysiis [name]
   "Get code for given name using NYSIIS algorithm."
   (.toUpperCase
    (loop [s (.toLowerCase name) [f & fs]
-          [nysiis-start nysiis-end nysiis-inner nysiis-vowels nysiis-laststep]]
+          [nysiis-start nysiis-end nysiis-inner nysiis-vowels nysiis-laststep collapse-duplicates]]
      (if f (recur (f s) fs) s))))
 
 (defn similar? [name1 name2 strategy]
   "Check if two names are similar using strategy.
    Strategy is just function name used for similarity (e.g soundex)"
   (= (strategy name1) (strategy name2)))
-
-
-;; TODO unit tests
-;; (soundex "Rubin") => R150
-;; (soundex "Robert") => R163
-;; (soundex "Rupert") => R163
-;; (soundex "Ashcraft") => A261
-;; (soundex "Ashcroft") => A261
-;; (soundex "Tymczak") => T522
-;; (soundex "Pfister") => P236
