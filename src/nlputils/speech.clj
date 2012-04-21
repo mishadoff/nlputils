@@ -1,4 +1,5 @@
-(ns nlputils.speech)
+(ns nlputils.speech
+  (:require [clojure.contrib.string :as str]))
 
 ;; basic soundex codes
 (def SOUNDEX_CODES {\b 1 \f 1 \p 1 \v 1
@@ -22,6 +23,19 @@
 ;; letters ignored by soundex code
 (def SOUNDEX_IGNORE_1 #{\a \e \i \o \u \y})
 (def SOUNDEX_IGNORE_2 #{\h \w})
+
+;; NYSIIS codes
+(def NYSIIS_START {"mac" "mcc", "kn" "n", "k" "c",
+                   "ph" "ff", "pf" "ff", "sch" "sss"})
+
+(def NYSIIS_END {"ee" "y", "ie" "y", "dt" "d", "rt" "d"
+                 "rd" "d", "nt" "d", "nd" "d"})
+
+(def NYSIIS_INNER {"ev" "af", "e" "a", "i" "a", "o" "a", "u" "a",
+                   "q" "g", "z" "s", "m" "n", "kn" "n",
+                   "k" "c", "sch" "sss", "ph" "ff"})
+
+(def NYSIIS_SEQ ["sch" "ph" "ev" "kn" "m" "z" "q" "k" "e" "i" "o" "u"])
 
 (defn soundex [name]
   "Get soundex-code for given name using codes. Only English.
@@ -47,6 +61,61 @@
              (if (= l prev)
                (recur ls l ls-new)
                (recur ls l (conj ls-new l))) ls-new))))))
+
+(defn- nysiis-start [name]
+  "Transform start of the word due to table. Step 1."
+  (loop [[p & prefs] (keys NYSIIS_START)]
+    (if p
+      (if (.startsWith name p)
+        (let [strep (get NYSIIS_START p)]
+          (str strep (subs name (count strep))))
+        (recur prefs)) name)))
+
+(defn- nysiis-end [name]
+  "Transform end of the word due to table. Step 2."
+  (loop [[p & prefs] (keys NYSIIS_END)]
+    (if p
+      (if (.endsWith name p)
+        (let [strep (get NYSIIS_END p)]
+          (str (subs name 0 (- (count name) (count strep) 1)) strep))
+        (recur prefs)) name)))
+
+(defn- nysiis-inner [name]
+  "Transform all occurrences but first character due to table. Step 3."
+  (str (subs name 0 1)
+       (loop [[from & to] NYSIIS_SEQ s (subs name 1)]
+         (if from
+           (recur to (str/replace-str from (get NYSIIS_INNER from) s)) s))))
+
+(defn- vowel? [char]
+  "Predicate that detects if character is vowel."
+  (contains? #{\a \e \i \o \u} char))
+
+(defn- nysiis-vowels [name]
+  "Remove all [h] after vowel. Replace all [w->a] after vowel. Step 4."
+  (loop [[l & ls] (partition 2 1 name) news []]
+    (if l
+      (let [[a b] l]
+        (if (vowel? a)
+          (cond (= \h b) (recur ls news)
+                (= \w b) (recur ls (conj news \a))
+                :else (recur ls (conj news b))) (recur ls (conj news b))))
+      (apply str (subs name 0 1) news))))
+
+(defn- nysiis-laststep [name]
+  "Different small modifications. Step 5."
+  (cond (.endsWith name "as") (subs name 0 (- (count name) 2))
+        (.endsWith name "s") (subs name 0 (- (count name) 1))
+        (.endsWith name "a") (subs name 0 (- (count name) 1))
+        (.endsWith name "ay") (str (subs name 0 (- (count name) 1)) "y")
+        :else name))
+        
+
+(defn nysiis [name]
+  "Get code for given name using NYSIIS algorithm."
+  (loop [s (.toLowerCase name) [f & fs]
+         [nysiis-start nysiis-end nysiis-inner nysiis-vowels nysiis-laststep]]
+    (if f (recur (f s) fs) s)))
 
 (defn similar? [name1 name2 strategy]
   "Check if two names are similar using strategy.
