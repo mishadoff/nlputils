@@ -107,15 +107,16 @@
   (cond (.endsWith name "as") (subs name 0 (- (count name) 2))
         (.endsWith name "s") (subs name 0 (- (count name) 1))
         (.endsWith name "a") (subs name 0 (- (count name) 1))
-        (.endsWith name "ay") (str (subs name 0 (- (count name) 1)) "y")
+        (.endsWith name "ay") (str (subs name 0 (- (count name) 2)) "y")
         :else name))
         
 
 (defn nysiis [name]
   "Get code for given name using NYSIIS algorithm."
-  (loop [s (.toLowerCase name) [f & fs]
-         [nysiis-start nysiis-end nysiis-inner nysiis-vowels nysiis-laststep]]
-    (if f (recur (f s) fs) s)))
+  (.toUpperCase
+   (loop [s (.toLowerCase name) [f & fs]
+          [nysiis-start nysiis-end nysiis-inner nysiis-vowels nysiis-laststep]]
+     (if f (recur (f s) fs) s))))
 
 (defn similar? [name1 name2 strategy]
   "Check if two names are similar using strategy.
